@@ -48,22 +48,46 @@ if 'analysis' in st.session_state:
     summary,detail,subjects,audit=st.session_state['analysis']
     a,b,c=st.columns(3)
     a.metric('Program sheets',len(audit))
-    b.metric('Distinct numbered courses',len(summary))
-    c.metric('Course-program listings',len(detail))
+    b.metric('Numbered courses and subject requirements',len(summary))
+    c.metric('Numbered course-program listings',len(detail))
     st.subheader('Find a course')
     query=st.text_input('Search course number, title, or program name',placeholder='ECON 281, Accounting, History...').strip()
     results=summary.copy()
     if query:
         mask=results.astype(str).apply(lambda column:column.str.contains(query,case=False,regex=False)).any(axis=1)
         results=results[mask]
+    if not subjects.empty:
+        extras=[]
+        for subject,group in subjects.groupby('Subject'):
+            programs=sorted(set(group['Program sheet']))
+            extras.append({'Course code':subject,'Catalog title':'Unspecified '+subject+' course','Number of program sheets':len(programs),'Program sheets':'; '.join(programs),'Jane catalog match':'Subject-only requirement'})
+        results=pd.concat([results,pd.DataFrame(extras)],ignore_index=True)
+        if query:
+            results=results[results.astype(str).apply(lambda col:col.str.contains(query,case=False,regex=False)).any(axis=1)]
+    results=results.sort_values(['Number of program sheets','Course code'],ascending=[False,True])
     st.dataframe(results,hide_index=True,use_container_width=True)
-    with st.expander('Each program-course listing'):
+    with st.expander('See which programs list each course or subject requirement'):
         st.dataframe(detail,hide_index=True,use_container_width=True)
-    with st.expander('Subject-only / unspecified requirements (HIST, RS, etc.)'):
-        st.dataframe(subjects,hide_index=True,use_container_width=True)
-    with st.expander('Extraction audit and missing course matches'):
-        st.dataframe(audit,hide_index=True,use_container_width=True)
-        st.dataframe(detail[detail['In Jane catalog']=='Review'],hide_index=True,use_container_width=True)
-    st.warning('A course code appearing on a sheet does not prove it is mandatory: alternatives, notes, and double-major sheets require human review. Multiple sheets may represent overlapping student populations.')
-    report=to_excel([('Course Counts',summary),('Course by Program',detail),('Subject Requirements',subjects),('Extraction Audit',audit),('Unmatched Codes',detail[detail['In Jane catalog']=='Review'])])
+        if not subjects.empty:
+            st.dataframe(subjects,hide_index=True,use_container_width=True)
+    failed=audit[audit['Status']!='Extracted']
+    if not failed.empty:
+        st.warning(f"{len(failed)} PDF(s) may need review because extraction found no numbered courses or encountered an error.")
+        st.dataframe(failed,hide_index=True,use_container_width=True)
+    st.caption('Course codes not found in Jane’s catalog are flagged as Review in Courses by Program. Subject-only requirements like HIST and RS are counted separately from specific courses.')
+    st.warning('These counts represent program sheets, not confirmed enrollment demand or unique degree programs. A listed course may be optional or mentioned in a note.')
+    subject_counts=[]
+    if not subjects.empty:
+        for subject,group in subjects.groupby('Subject'):
+            programs=sorted(set(group['Program sheet']))
+            subject_counts.append({'Course code':subject,'Catalog title':'Unspecified '+subject+' course','Number of program sheets':len(programs),
+                                   'Program sheets':'; '.join(programs),'Jane catalog match':'Subject-only requirement'})
+    combined_summary=pd.concat([summary,pd.DataFrame(subject_counts)],ignore_index=True).sort_values(['Number of program sheets','Course code'],ascending=[False,True]).reset_index(drop=True)
+    subject_detail=pd.DataFrame([
+        {'Program sheet':r['Program sheet'],'Course code':r['Subject'],
+         'Catalog title':'Unspecified '+r['Subject']+' course','In Jane catalog':'Subject-only requirement','Pages':str(r['Page'])}
+        for _,r in subjects.iterrows()
+    ],columns=detail.columns)
+    combined_detail=pd.concat([detail,subject_detail],ignore_index=True).sort_values(['Program sheet','Course code']).reset_index(drop=True)
+    report=to_excel([('Course Counts',combined_summary),('Courses by Program',combined_detail)])
     st.download_button('Download Excel analysis',data=report,file_name='spalding_course_requirements.xlsx',mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',type='primary')
