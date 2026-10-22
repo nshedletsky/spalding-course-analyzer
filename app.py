@@ -88,6 +88,6 @@ if 'analysis' in st.session_state:
          'Catalog title':'Unspecified '+r['Subject']+' course','In Jane catalog':'Subject-only requirement','Pages':str(r['Page'])}
         for _,r in subjects.iterrows()
     ],columns=detail.columns)
-    combined_detail=pd.concat([detail,subject_detail],ignore_index=True).sort_values(['Program sheet','Course code']).reset_index(drop=True)
+    combined_detail=pd.concat([detail,subject_detail],ignore_index=True).drop_duplicates(subset=['Program sheet','Course code']).sort_values(['Program sheet','Course code']).reset_index(drop=True)
     report=to_excel([('Course Counts',combined_summary),('Courses by Program',combined_detail)])
     st.download_button('Download Excel analysis',data=report,file_name='spalding_course_requirements.xlsx',mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',type='primary')
