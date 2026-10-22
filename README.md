@@ -1,6 +1,6 @@
 # Spalding Course Requirement Analyzer
 
-Upload program-sheet PDFs or a ZIP, identify numbered course codes, match them against Jane's course catalog, view program-sheet counts and named programs, and download a formatted Excel analysis.
+Upload program-sheet PDFs or a ZIP, identify numbered course codes, match them against (Jane's) course catalog, view program-sheet counts and named programs, and download a formatted Excel analysis.
 
 ## Run locally
 ```bash
