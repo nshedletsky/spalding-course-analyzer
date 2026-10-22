@@ -9,8 +9,8 @@ from analyzer import analyze, to_excel
 
 st.set_page_config(page_title='Spalding Course Requirement Analyzer',page_icon='📚',layout='wide')
 st.title('Spalding Course Requirement Analyzer')
-st.write('See which program sheets list each course, with named programs and counts. No database required.')
-st.caption('Counts program-sheet listings, not students or projected enrollment. Always review extracted results.')
+st.write('See which program sheets list each course, with named programs and counts.')
+st.caption('Counts program-sheet listings, Always review extracted results.')
 
 @st.cache_data
 def catalog():
